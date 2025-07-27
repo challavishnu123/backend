@@ -16,43 +16,88 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public Student register(Student student) {
+        // Check if student already exists before registration
         Student existing = repository.findByRollNumber(student.getRollNumber());
         if (existing != null) {
             throw new RuntimeException("❌ Student already exists with roll number: " + student.getRollNumber());
         }
+        
+        // Validate required fields
+        if (student.getRollNumber() == null || student.getRollNumber().trim().isEmpty()) {
+            throw new RuntimeException("❌ Roll number is required");
+        }
+        
+        if (student.getPassword() == null || student.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("❌ Password is required");
+        }
+        
+        // Save new student
         return repository.save(student);
     }
 
     @Override
     public Student login(String rollNumber, String password) {
-        Student student = repository.findByRollNumber(rollNumber);
-        if (student != null) {
-            if (student.getPassword().equals(password)) {
-                return student;
-            } else {
-                throw new RuntimeException("❌ Incorrect password");
-            }
-        } else {
-            // ✅ Auto-register if not present
-            Student newStudent = new Student();
-            newStudent.setRollNumber(rollNumber);
-            newStudent.setPassword(password);
-            return repository.save(newStudent);
+        // Validate input parameters
+        if (rollNumber == null || rollNumber.trim().isEmpty()) {
+            throw new RuntimeException("❌ Roll number is required");
         }
+        
+        if (password == null || password.trim().isEmpty()) {
+            throw new RuntimeException("❌ Password is required");
+        }
+        
+        // Find student by roll number
+        Student student = repository.findByRollNumber(rollNumber);
+        
+        if (student == null) {
+            // Don't auto-register - throw error instead
+            throw new RuntimeException("❌ Student not found. Please register first.");
+        }
+        
+        // Validate password
+        if (!student.getPassword().equals(password)) {
+            throw new RuntimeException("❌ Invalid password");
+        }
+        
+        return student;
     }
 
     @Override
     public Student updatePassword(String rollNumber, String newPassword) {
-        Student student = repository.findByRollNumber(rollNumber);
-        if (student != null) {
-            student.setPassword(newPassword);
-            return repository.save(student);
+        // Validate input parameters
+        if (rollNumber == null || rollNumber.trim().isEmpty()) {
+            throw new RuntimeException("❌ Roll number is required");
         }
-        throw new RuntimeException("❌ Student not found");
+        
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new RuntimeException("❌ New password is required");
+        }
+        
+        // Find student
+        Student student = repository.findByRollNumber(rollNumber);
+        if (student == null) {
+            throw new RuntimeException("❌ Student not found with roll number: " + rollNumber);
+        }
+        
+        // Update password
+        student.setPassword(newPassword);
+        return repository.save(student);
     }
 
     @Override
     public void delete(String rollNumber) {
+        // Validate input parameter
+        if (rollNumber == null || rollNumber.trim().isEmpty()) {
+            throw new RuntimeException("❌ Roll number is required");
+        }
+        
+        // Check if student exists before deletion
+        Student student = repository.findByRollNumber(rollNumber);
+        if (student == null) {
+            throw new RuntimeException("❌ Student not found with roll number: " + rollNumber);
+        }
+        
+        // Delete by roll number (which is the ID)
         repository.deleteById(rollNumber);
     }
 
@@ -63,6 +108,33 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public Student getStudentByRollNumber(String rollNumber) {
+        // Validate input parameter
+        if (rollNumber == null || rollNumber.trim().isEmpty()) {
+            throw new RuntimeException("❌ Roll number is required");
+        }
+        
         return repository.findByRollNumber(rollNumber);
+    }
+
+    // Additional utility methods
+    public boolean existsByRollNumber(String rollNumber) {
+        if (rollNumber == null || rollNumber.trim().isEmpty()) {
+            return false;
+        }
+        return repository.findByRollNumber(rollNumber) != null;
+    }
+
+    public long getStudentCount() {
+        return repository.count();
+    }
+
+    // Validate student credentials without throwing exceptions
+    public boolean validateCredentials(String rollNumber, String password) {
+        try {
+            Student student = repository.findByRollNumber(rollNumber);
+            return student != null && student.getPassword().equals(password);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
