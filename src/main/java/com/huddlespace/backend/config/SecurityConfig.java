@@ -1,3 +1,4 @@
+// src/main/java/com/huddlespace/backend/config/SecurityConfig.java
 package com.huddlespace.backend.config;
 
 import com.huddlespace.backend.security.JwtAuthFilter;
@@ -54,6 +55,9 @@ public class SecurityConfig {
                 // Public authentication endpoints
                 .requestMatchers("/auth/**").permitAll()
                 
+                // WebSocket endpoints (authentication handled by handshake interceptor)
+                .requestMatchers("/ws/**").permitAll()
+                
                 // Public registration and login endpoints (legacy support)
                 .requestMatchers("/student/login", "/student/register").permitAll()
                 .requestMatchers("/faculty/login", "/faculty/register").permitAll()
@@ -74,6 +78,9 @@ public class SecurityConfig {
                 .requestMatchers("/faculty/delete").hasRole("FACULTY")
                 .requestMatchers("/faculty/all").hasRole("FACULTY")
                 .requestMatchers("/faculty/students").hasRole("FACULTY")
+                
+                // Chat API endpoints (require authentication)
+                .requestMatchers("/api/chat/**").hasAnyRole("STUDENT", "FACULTY")
                 
                 // Any other request must be authenticated
                 .anyRequest().authenticated()
