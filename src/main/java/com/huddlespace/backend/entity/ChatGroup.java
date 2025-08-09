@@ -10,7 +10,7 @@ import java.util.ArrayList;
 @Document(collection = "chat_groups")
 public class ChatGroup {
     @Id
-    private String groupId;
+    private String groupId; // MongoDB will auto-generate this value
     private String groupName;
     private String groupType; // SUBJECT, THREAD, GENERAL
     private String createdBy; // Faculty ID who created the group
@@ -24,7 +24,21 @@ public class ChatGroup {
         this.members = new ArrayList<>();
         this.isActive = true;
     }
+    
+    /**
+     * The correct constructor for creating new groups.
+     * It allows MongoDB to generate the groupId automatically.
+     */
+    public ChatGroup(String groupName, String groupType, String createdBy) {
+        this(); // Calls the default constructor to set createdAt, members, etc.
+        this.groupName = groupName;
+        this.groupType = groupType;
+        this.createdBy = createdBy;
+    }
 
+    /**
+     * This constructor can be kept for other purposes, like mapping from a full DTO if needed.
+     */
     public ChatGroup(String groupId, String groupName, String groupType, String createdBy) {
         this();
         this.groupId = groupId;
@@ -33,7 +47,7 @@ public class ChatGroup {
         this.createdBy = createdBy;
     }
 
-    // Getters and Setters
+    // --- Getters and Setters ---
     public String getGroupId() {
         return groupId;
     }
@@ -95,6 +109,6 @@ public class ChatGroup {
     }
 
     public void setActive(boolean active) {
-        isActive = active;
+        this.isActive = active;
     }
 }

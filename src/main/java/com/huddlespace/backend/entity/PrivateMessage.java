@@ -1,18 +1,33 @@
 package com.huddlespace.backend.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
+// This annotation tells MongoDB to create a compound index on senderId and receiverId,
+// which is crucial for quickly finding messages between two users.
 @Document(collection = "private_messages")
+@CompoundIndex(name = "conversation_index", def = "{'senderId': 1, 'receiverId': 1}")
 public class PrivateMessage {
     @Id
     private String id;
+
+    // By indexing senderId and receiverId, we optimize lookups.
+    @Indexed
     private String senderId;
+    
+    @Indexed
     private String receiverId;
+    
     private String messageText;
+
+    // Indexing the timestamp allows for fast sorting of messages.
+    @Indexed(name = "timestamp_index")
     private LocalDateTime timestamp;
+    
     private boolean isRead;
     private String senderType; // STUDENT or FACULTY
     private String receiverType; // STUDENT or FACULTY
@@ -31,7 +46,7 @@ public class PrivateMessage {
         this.receiverType = receiverType;
     }
 
-    // Getters and Setters
+    // --- Getters and Setters (No changes below this line) ---
     public String getId() {
         return id;
     }

@@ -35,13 +35,11 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public PrivateMessage sendPrivateMessage(PrivateMessageDto messageDto) {
-        // Validate input
         if (messageDto.getSenderId() == null || messageDto.getReceiverId() == null || 
             messageDto.getMessageText() == null || messageDto.getMessageText().trim().isEmpty()) {
             throw new RuntimeException("Invalid message data");
         }
 
-        // Create private message entity
         PrivateMessage message = new PrivateMessage(
             messageDto.getSenderId(),
             messageDto.getReceiverId(),
@@ -55,7 +53,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public List<PrivateMessage> getPrivateMessagesBetweenUsers(String userId1, String userId2, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "timestamp"));
         return privateMessageRepository.findMessagesBetweenUsers(userId1, userId2, pageable);
     }
 
@@ -86,13 +84,11 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public GroupMessage sendGroupMessage(GroupMessageDto messageDto) {
-        // Validate input
         if (messageDto.getSenderId() == null || messageDto.getGroupId() == null || 
             messageDto.getMessageText() == null || messageDto.getMessageText().trim().isEmpty()) {
             throw new RuntimeException("Invalid group message data");
         }
 
-        // Verify group exists and user is a member
         ChatGroup group = chatGroupRepository.findByGroupId(messageDto.getGroupId());
         if (group == null || !group.isActive()) {
             throw new RuntimeException("Group not found or inactive");
@@ -102,7 +98,6 @@ public class ChatServiceImpl implements ChatService {
             throw new RuntimeException("User is not a member of this group");
         }
 
-        // Create group message entity
         GroupMessage message = new GroupMessage(
             messageDto.getSenderId(),
             messageDto.getGroupId(),
@@ -116,35 +111,26 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public List<GroupMessage> getGroupMessages(String groupId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return groupMessageRepository.findByGroupIdOrderByTimestampDesc(groupId, pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "timestamp"));
+        // --- THIS IS THE FIX ---
+        // Pass the entire Pageable object, not just the Sort object.
+        return groupMessageRepository.findByGroupIdOrderByTimestampAsc(groupId, pageable);
     }
 
     @Override
     public ChatGroup createGroup(ChatGroupDto groupDto) {
-        // Validate input
-        if (groupDto.getGroupId() == null || groupDto.getGroupName() == null || 
+        if (groupDto.getGroupName() == null || groupDto.getGroupName().trim().isEmpty() || 
             groupDto.getCreatedBy() == null) {
-            throw new RuntimeException("Invalid group data");
+            throw new RuntimeException("Invalid group data: Group name and creator are required.");
         }
 
-        // Check if group already exists
-        ChatGroup existing = chatGroupRepository.findByGroupId(groupDto.getGroupId());
-        if (existing != null) {
-            throw new RuntimeException("Group already exists with ID: " + groupDto.getGroupId());
-        }
-
-        // Create new group
         ChatGroup group = new ChatGroup(
-            groupDto.getGroupId(),
             groupDto.getGroupName(),
             groupDto.getGroupType(),
             groupDto.getCreatedBy()
         );
 
         group.setDescription(groupDto.getDescription());
-        
-        // Add creator as first member
         group.getMembers().add(groupDto.getCreatedBy());
 
         return chatGroupRepository.save(group);
@@ -162,7 +148,7 @@ public class ChatServiceImpl implements ChatService {
             return chatGroupRepository.save(group);
         }
 
-        return group; // User already a member
+        return group;
     }
 
     @Override
