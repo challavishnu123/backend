@@ -6,7 +6,6 @@ import com.huddlespace.backend.dto.PrivateMessageDto;
 import com.huddlespace.backend.entity.ChatGroup;
 import com.huddlespace.backend.entity.GroupMessage;
 import com.huddlespace.backend.entity.PrivateMessage;
-
 import java.util.List;
 
 public interface ChatService {
@@ -33,4 +32,5 @@ public interface ChatService {
     // Utility Operations
     List<String> getUserConversations(String userId);
     long getUnreadMessageCount(String userId);
+    boolean areUsersConnected(String userId1, String userId2);
 }

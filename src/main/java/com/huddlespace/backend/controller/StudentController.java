@@ -27,7 +27,6 @@ public class StudentController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Student student) {
         try {
-            // Check if student already exists
             Student existing = service.getStudentByRollNumber(student.getRollNumber());
             if (existing != null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -37,10 +36,7 @@ public class StudentController {
                         ));
             }
             
-            // Register new student
             Student saved = service.register(student);
-            
-            // Generate JWT token for immediate login
             String token = jwtUtil.generateToken(saved.getRollNumber(), "STUDENT");
             
             return ResponseEntity.ok(Map.of(
@@ -62,7 +58,6 @@ public class StudentController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Student student) {
         try {
-            // Check if student exists
             Student existing = service.getStudentByRollNumber(student.getRollNumber());
 
             if (existing == null) {
@@ -73,7 +68,6 @@ public class StudentController {
                         ));
             }
             
-            // Validate password
             if (!existing.getPassword().equals(student.getPassword())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of(
@@ -82,7 +76,6 @@ public class StudentController {
                         ));
             }
             
-            // Generate JWT token for successful login
             String token = jwtUtil.generateToken(existing.getRollNumber(), "STUDENT");
             
             return ResponseEntity.ok(Map.of(
@@ -108,100 +101,57 @@ public class StudentController {
             String rollNumber = request.get("rollNumber");
             String newPassword = request.get("newPassword");
             
-            // Validate required fields
             if (rollNumber == null || rollNumber.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                            "message", "Roll number is required",
-                            "error", "MISSING_ROLL_NUMBER"
-                        ));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Roll number is required"));
             }
-            
             if (newPassword == null || newPassword.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                            "message", "New password is required",
-                            "error", "MISSING_PASSWORD"
-                        ));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "New password is required"));
             }
             
-            // Verify the authenticated user is updating their own password
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String authenticatedUser = auth.getName();
             
             if (!authenticatedUser.equals(rollNumber)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                            "message", "You can only update your own password",
-                            "error", "UNAUTHORIZED_ACCESS"
-                        ));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "You can only update your own password"));
             }
             
-            // Check if student exists
             Student existing = service.getStudentByRollNumber(rollNumber);
             if (existing == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(
-                            "message", "Student not found",
-                            "error", "USER_NOT_FOUND"
-                        ));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Student not found"));
             }
             
-            // Update password
             Student updated = service.updatePassword(rollNumber, newPassword);
-            
-            return ResponseEntity.ok(Map.of(
-                "message", "Password updated successfully",
-                "student", updated
-            ));
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully", "student", updated));
             
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                        "message", "Failed to update password: " + e.getMessage(),
-                        "error", "SERVER_ERROR"
-                    ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to update password: " + e.getMessage()));
         }
     }
 
+    /**
+     * --- THIS IS THE FIX ---
+     * This endpoint is for an admin (Faculty) to delete a student account.
+     */
     @DeleteMapping("/delete")
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasRole('FACULTY')") // 1. Allow FACULTY to access this endpoint.
     public ResponseEntity<?> delete(@RequestBody Map<String, String> request) {
         try {
             String rollNumber = request.get("rollNumber");
             
-            // Validate required field
             if (rollNumber == null || rollNumber.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                            "message", "Roll number is required",
-                            "error", "MISSING_ROLL_NUMBER"
-                        ));
+                        .body(Map.of("message", "Roll number is required"));
             }
             
-            // Verify the authenticated user is deleting their own account
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String authenticatedUser = auth.getName();
+            // 2. Remove the ownership check. A faculty member can delete any student.
+            // The check 'if (!authenticatedUser.equals(rollNumber))' has been removed.
             
-            if (!authenticatedUser.equals(rollNumber)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                            "message", "You can only delete your own account",
-                            "error", "UNAUTHORIZED_ACCESS"
-                        ));
-            }
-            
-            // Check if student exists
             Student existing = service.getStudentByRollNumber(rollNumber);
             if (existing == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(
-                            "message", "Student not found",
-                            "error", "USER_NOT_FOUND"
-                        ));
+                        .body(Map.of("message", "Student not found"));
             }
             
-            // Delete account
             service.delete(rollNumber);
             
             return ResponseEntity.ok(Map.of(
@@ -211,10 +161,7 @@ public class StudentController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                        "message", "Failed to delete account: " + e.getMessage(),
-                        "error", "SERVER_ERROR"
-                    ));
+                    .body(Map.of("message", "Failed to delete account: " + e.getMessage()));
         }
     }
 
@@ -230,10 +177,7 @@ public class StudentController {
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                        "message", "Failed to fetch students: " + e.getMessage(),
-                        "error", "SERVER_ERROR"
-                    ));
+                    .body(Map.of("message", "Failed to fetch students: " + e.getMessage()));
         }
     }
 
@@ -246,27 +190,15 @@ public class StudentController {
             
             Student student = service.getStudentByRollNumber(rollNumber);
             if (student != null) {
-                return ResponseEntity.ok(Map.of(
-                    "message", "Profile retrieved successfully",
-                    "profile", student
-                ));
+                return ResponseEntity.ok(Map.of("message", "Profile retrieved successfully", "profile", student));
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(
-                            "message", "Student profile not found",
-                            "error", "PROFILE_NOT_FOUND"
-                        ));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Student profile not found"));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                        "message", "Failed to fetch profile: " + e.getMessage(),
-                        "error", "SERVER_ERROR"
-                    ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to fetch profile: " + e.getMessage()));
         }
     }
 
-    // Additional endpoint to check if roll number exists
     @GetMapping("/check-exists/{rollNumber}")
     public ResponseEntity<?> checkStudentExists(@PathVariable String rollNumber) {
         try {
@@ -279,11 +211,7 @@ public class StudentController {
                 "message", exists ? "Student exists" : "Student not found"
             ));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                        "message", "Failed to check student existence: " + e.getMessage(),
-                        "error", "SERVER_ERROR"
-                    ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to check student existence: " + e.getMessage()));
         }
     }
 }

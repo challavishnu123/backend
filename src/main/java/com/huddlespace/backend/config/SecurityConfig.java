@@ -1,4 +1,3 @@
-// src/main/java/com/huddlespace/backend/config/SecurityConfig.java
 package com.huddlespace.backend.config;
 
 import com.huddlespace.backend.security.JwtAuthFilter;
@@ -52,37 +51,30 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                // Public authentication endpoints
                 .requestMatchers("/auth/**").permitAll()
-                
-                // WebSocket endpoints (authentication handled by handshake interceptor)
                 .requestMatchers("/ws/**").permitAll()
-                
-                // Public registration and login endpoints (legacy support)
                 .requestMatchers("/student/login", "/student/register").permitAll()
                 .requestMatchers("/faculty/login", "/faculty/register").permitAll()
-                
-                // Public endpoints for checking user existence
                 .requestMatchers("/student/check-exists/**").permitAll()
                 .requestMatchers("/faculty/check-exists/**").permitAll()
                 
-                // Protected student endpoints (require STUDENT role)
                 .requestMatchers("/student/profile").hasRole("STUDENT")
                 .requestMatchers("/student/update-password").hasRole("STUDENT")
-                .requestMatchers("/student/delete").hasRole("STUDENT")
+                .requestMatchers("/student/delete").hasRole("FACULTY")
                 .requestMatchers("/student/all").hasAnyRole("STUDENT", "FACULTY")
                 
-                // Protected faculty endpoints (require FACULTY role)  
                 .requestMatchers("/faculty/profile").hasRole("FACULTY")
                 .requestMatchers("/faculty/update-password").hasRole("FACULTY")
                 .requestMatchers("/faculty/delete").hasRole("FACULTY")
                 .requestMatchers("/faculty/all").hasRole("FACULTY")
                 .requestMatchers("/faculty/students").hasRole("FACULTY")
                 
-                // Chat API endpoints (require authentication)
                 .requestMatchers("/api/chat/**").hasAnyRole("STUDENT", "FACULTY")
+                .requestMatchers("/api/forum/**").hasAnyRole("STUDENT", "FACULTY")
+                .requestMatchers("/api/users/**").hasAnyRole("STUDENT", "FACULTY")
+                .requestMatchers("/api/connections/**").hasAnyRole("STUDENT", "FACULTY")
+                .requestMatchers("/api/profiles/**").hasAnyRole("STUDENT", "FACULTY")
                 
-                // Any other request must be authenticated
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

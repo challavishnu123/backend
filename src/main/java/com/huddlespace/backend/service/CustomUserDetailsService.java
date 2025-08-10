@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -22,34 +23,18 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // First try to find as student
-        Student student = studentRepository.findByRollNumber(username);
-        if (student != null) {
-            return new CustomUserDetails(student.getRollNumber(), student.getPassword(), "STUDENT");
+        Optional<Student> student = studentRepository.findByRollNumber(username);
+        if (student.isPresent()) {
+            Student s = student.get();
+            return new CustomUserDetails(s.getRollNumber(), s.getPassword(), "STUDENT");
         }
 
-        // Then try to find as faculty
-        Faculty faculty = facultyRepository.findByFacultyId(username);
-        if (faculty != null) {
-            return new CustomUserDetails(faculty.getFacultyId(), faculty.getPassword(), "FACULTY");
+        Optional<Faculty> faculty = facultyRepository.findByFacultyId(username);
+        if (faculty.isPresent()) {
+            Faculty f = faculty.get();
+            return new CustomUserDetails(f.getFacultyId(), f.getPassword(), "FACULTY");
         }
 
         throw new UsernameNotFoundException("User not found with username: " + username);
-    }
-
-    public UserDetails loadUserByUsernameAndType(String username, String userType) throws UsernameNotFoundException {
-        if ("STUDENT".equalsIgnoreCase(userType)) {
-            Student student = studentRepository.findByRollNumber(username);
-            if (student != null) {
-                return new CustomUserDetails(student.getRollNumber(), student.getPassword(), "STUDENT");
-            }
-        } else if ("FACULTY".equalsIgnoreCase(userType)) {
-            Faculty faculty = facultyRepository.findByFacultyId(username);
-            if (faculty != null) {
-                return new CustomUserDetails(faculty.getFacultyId(), faculty.getPassword(), "FACULTY");
-            }
-        }
-
-        throw new UsernameNotFoundException("User not found with username: " + username + " and type: " + userType);
     }
 }

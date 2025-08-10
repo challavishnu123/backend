@@ -6,6 +6,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import java.util.Map;
 
 @Component
 public class WebSocketEventListener {
@@ -21,16 +22,18 @@ public class WebSocketEventListener {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
         
-        // Get user information from session attributes
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
-        String userType = (String) headerAccessor.getSessionAttributes().get("userType");
-        
-        if (username != null) {
-            System.out.println("User connected: " + username + " (" + userType + ") - Session: " + sessionId);
+        // --- THIS IS THE FIX ---
+        // Add a null check to ensure session attributes exist before we try to use them.
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            String username = (String) sessionAttributes.get("username");
+            String userType = (String) sessionAttributes.get("userType");
             
-            // Optional: Notify other users about user's online status
-            // messagingTemplate.convertAndSend("/topic/user-status", 
-            //     Map.of("username", username, "status", "online", "userType", userType));
+            if (username != null) {
+                System.out.println("User connected: " + username + " (" + userType + ") - Session: " + sessionId);
+            }
+        } else {
+            System.out.println("WebSocket Connect: Session attributes were not ready for session ID: " + sessionId);
         }
     }
 
@@ -39,16 +42,18 @@ public class WebSocketEventListener {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
         
-        // Get user information from session attributes
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
-        String userType = (String) headerAccessor.getSessionAttributes().get("userType");
-        
-        if (username != null) {
-            System.out.println("User disconnected: " + username + " (" + userType + ") - Session: " + sessionId);
+        // --- ADDED FOR SAFETY ---
+        // Also add a null check here for disconnection events.
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            String username = (String) sessionAttributes.get("username");
+            String userType = (String) sessionAttributes.get("userType");
             
-            // Optional: Notify other users about user's offline status
-            // messagingTemplate.convertAndSend("/topic/user-status", 
-            //     Map.of("username", username, "status", "offline", "userType", userType));
+            if (username != null) {
+                System.out.println("User disconnected: " + username + " (" + userType + ") - Session: " + sessionId);
+            }
+        } else {
+             System.out.println("WebSocket Disconnect: Session attributes were not available for session ID: " + sessionId);
         }
     }
 }

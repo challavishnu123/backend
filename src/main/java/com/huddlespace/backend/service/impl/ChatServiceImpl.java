@@ -4,11 +4,15 @@ import com.huddlespace.backend.dto.ChatGroupDto;
 import com.huddlespace.backend.dto.GroupMessageDto;
 import com.huddlespace.backend.dto.PrivateMessageDto;
 import com.huddlespace.backend.entity.ChatGroup;
+import com.huddlespace.backend.entity.Faculty;
 import com.huddlespace.backend.entity.GroupMessage;
 import com.huddlespace.backend.entity.PrivateMessage;
+import com.huddlespace.backend.entity.Student;
 import com.huddlespace.backend.repository.ChatGroupRepository;
+import com.huddlespace.backend.repository.FacultyRepository;
 import com.huddlespace.backend.repository.GroupMessageRepository;
 import com.huddlespace.backend.repository.PrivateMessageRepository;
+import com.huddlespace.backend.repository.StudentRepository;
 import com.huddlespace.backend.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -16,22 +20,23 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 public class ChatServiceImpl implements ChatService {
 
     @Autowired
     private PrivateMessageRepository privateMessageRepository;
-
     @Autowired
     private GroupMessageRepository groupMessageRepository;
-
     @Autowired
     private ChatGroupRepository chatGroupRepository;
+    @Autowired 
+    private StudentRepository studentRepository;
+    @Autowired 
+    private FacultyRepository facultyRepository;
 
     @Override
     public PrivateMessage sendPrivateMessage(PrivateMessageDto messageDto) {
@@ -76,7 +81,7 @@ public class ChatServiceImpl implements ChatService {
             .findByReceiverIdAndIsReadFalse(receiverId)
             .stream()
             .filter(msg -> msg.getSenderId().equals(senderId))
-            .collect(Collectors.toList());
+            .toList();
 
         unreadMessages.forEach(msg -> msg.setRead(true));
         privateMessageRepository.saveAll(unreadMessages);
@@ -112,8 +117,6 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<GroupMessage> getGroupMessages(String groupId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "timestamp"));
-        // --- THIS IS THE FIX ---
-        // Pass the entire Pageable object, not just the Sort object.
         return groupMessageRepository.findByGroupIdOrderByTimestampAsc(groupId, pageable);
     }
 
@@ -177,22 +180,36 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public List<String> getUserConversations(String userId) {
-        List<PrivateMessage> messages = privateMessageRepository.findConversationsForUser(userId);
-        
-        Set<String> conversationUsers = new HashSet<>();
-        for (PrivateMessage message : messages) {
-            if (message.getSenderId().equals(userId)) {
-                conversationUsers.add(message.getReceiverId());
-            } else {
-                conversationUsers.add(message.getSenderId());
-            }
+        Object user = findUser(userId);
+        if (user instanceof Student) {
+            return new ArrayList<>(((Student) user).getConnections());
+        } else if (user instanceof Faculty) {
+            return new ArrayList<>(((Faculty) user).getConnections());
         }
-        
-        return conversationUsers.stream().collect(Collectors.toList());
+        return List.of();
     }
 
     @Override
     public long getUnreadMessageCount(String userId) {
         return privateMessageRepository.countByReceiverIdAndIsReadFalse(userId);
+    }
+
+    @Override
+    public boolean areUsersConnected(String userId1, String userId2) {
+        Object user1 = findUser(userId1);
+        if (user1 instanceof Student) {
+            return ((Student) user1).getConnections().contains(userId2);
+        } else if (user1 instanceof Faculty) {
+            return ((Faculty) user1).getConnections().contains(userId2);
+        }
+        return false;
+    }
+
+    private Object findUser(String userId) {
+        Optional<Student> studentOptional = studentRepository.findByRollNumber(userId);
+        if (studentOptional.isPresent()) {
+            return studentOptional.get();
+        }
+        return facultyRepository.findByFacultyId(userId).orElse(null);
     }
 }
