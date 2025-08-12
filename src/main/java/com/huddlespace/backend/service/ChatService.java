@@ -17,6 +17,9 @@ public interface ChatService {
     void markMessageAsRead(String messageId);
     void markAllMessagesAsRead(String senderId, String receiverId);
     
+    // --- NEW METHOD SIGNATURE ---
+    PrivateMessage sharePostAsMessage(String senderId, String receiverId, String postId, String postOwner, String fileId);
+    
     // Group Message Operations
     GroupMessage sendGroupMessage(GroupMessageDto messageDto);
     List<GroupMessage> getGroupMessages(String groupId, int page, int size);

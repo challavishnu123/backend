@@ -58,6 +58,9 @@ public class SecurityConfig {
                 .requestMatchers("/student/check-exists/**").permitAll()
                 .requestMatchers("/faculty/check-exists/**").permitAll()
                 
+                // --- THIS RULE IS CRITICAL ---
+                .requestMatchers("/api/feed/images/**").permitAll()
+                
                 .requestMatchers("/student/profile").hasRole("STUDENT")
                 .requestMatchers("/student/update-password").hasRole("STUDENT")
                 .requestMatchers("/student/delete").hasRole("FACULTY")
@@ -74,6 +77,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/**").hasAnyRole("STUDENT", "FACULTY")
                 .requestMatchers("/api/connections/**").hasAnyRole("STUDENT", "FACULTY")
                 .requestMatchers("/api/profiles/**").hasAnyRole("STUDENT", "FACULTY")
+                .requestMatchers("/api/feed/**").hasAnyRole("STUDENT", "FACULTY")
                 
                 .anyRequest().authenticated()
             )

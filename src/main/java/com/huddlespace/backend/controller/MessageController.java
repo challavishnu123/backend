@@ -12,6 +12,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import java.util.Map;
 
 @Controller
 public class MessageController {
@@ -33,7 +34,6 @@ public class MessageController {
                 throw new RuntimeException("Unauthorized: Cannot send message as different user");
             }
 
-            // --- NEW SECURITY CHECK ---
             if (!chatService.areUsersConnected(messageDto.getSenderId(), messageDto.getReceiverId())) {
                 throw new RuntimeException("Cannot send message to a user you are not connected with.");
             }
@@ -66,5 +66,64 @@ public class MessageController {
         }
     }
 
-    // ... other methods in the file remain unchanged ...
+    @MessageMapping("/group-message")
+    public void sendGroupMessage(@Payload GroupMessageDto messageDto,
+                                SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            String authenticatedUser = (String) headerAccessor.getSessionAttributes().get("username");
+            String userType = (String) headerAccessor.getSessionAttributes().get("userType");
+
+            if (!authenticatedUser.equals(messageDto.getSenderId())) {
+                throw new RuntimeException("Unauthorized: Cannot send message as different user");
+            }
+
+            messageDto.setSenderType(userType);
+            GroupMessage savedMessage = chatService.sendGroupMessage(messageDto);
+
+            GroupMessageDto responseDto = new GroupMessageDto();
+            responseDto.setId(savedMessage.getId());
+            responseDto.setSenderId(savedMessage.getSenderId());
+            responseDto.setGroupId(savedMessage.getGroupId());
+            responseDto.setMessageText(savedMessage.getMessageText());
+            responseDto.setTimestamp(savedMessage.getTimestamp());
+            responseDto.setSenderType(savedMessage.getSenderType());
+            responseDto.setGroupType(savedMessage.getGroupType());
+            responseDto.setSenderName(authenticatedUser);
+
+            messagingTemplate.convertAndSend(
+                "/topic/group/" + messageDto.getGroupId(),
+                responseDto
+            );
+
+        } catch (Exception e) {
+            messagingTemplate.convertAndSendToUser(
+                messageDto.getSenderId(),
+                "/queue/errors",
+                "Failed to send group message: " + e.getMessage()
+            );
+        }
+    }
+
+    @MessageMapping("/share-post")
+    public void sharePost(@Payload Map<String, String> payload, SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            String senderId = (String) headerAccessor.getSessionAttributes().get("username");
+            String receiverId = payload.get("receiverId");
+            String postId = payload.get("postId");
+            String postOwner = payload.get("postOwner");
+            String fileId = payload.get("fileId");
+
+            String messageText = String.format("SHARED_POST::%s::%s::%s", postId, postOwner, fileId);
+            
+            PrivateMessageDto messageDto = new PrivateMessageDto(senderId, receiverId, messageText);
+            
+            sendPrivateMessage(messageDto, headerAccessor);
+
+        } catch (Exception e) {
+            String senderId = (String) headerAccessor.getSessionAttributes().get("username");
+            messagingTemplate.convertAndSendToUser(
+                senderId, "/queue/errors", "Failed to share post: " + e.getMessage()
+            );
+        }
+    }
 }

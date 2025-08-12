@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ public class ChatServiceImpl implements ChatService {
     private StudentRepository studentRepository;
     @Autowired 
     private FacultyRepository facultyRepository;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Override
     public PrivateMessage sendPrivateMessage(PrivateMessageDto messageDto) {
@@ -85,6 +88,28 @@ public class ChatServiceImpl implements ChatService {
 
         unreadMessages.forEach(msg -> msg.setRead(true));
         privateMessageRepository.saveAll(unreadMessages);
+    }
+    
+    @Override
+    public PrivateMessage sharePostAsMessage(String senderId, String receiverId, String postId, String postOwner, String fileId) {
+        if (!areUsersConnected(senderId, receiverId)) {
+            throw new IllegalStateException("You can only share posts with your connections.");
+        }
+        
+        String messageText = String.format("SHARED_POST::%s::%s::%s", postId, postOwner, fileId);
+        
+        Object sender = findUser(senderId);
+        String senderType = (sender instanceof Student) ? "STUDENT" : "FACULTY";
+
+        PrivateMessage sharedPostMessage = new PrivateMessage(senderId, receiverId, messageText, senderType, null);
+        
+        PrivateMessage savedMessage = privateMessageRepository.save(sharedPostMessage);
+
+        // After saving, push the message to both users via WebSocket for a real-time update.
+        messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", savedMessage);
+        messagingTemplate.convertAndSendToUser(receiverId, "/queue/messages", savedMessage);
+        
+        return savedMessage;
     }
 
     @Override
