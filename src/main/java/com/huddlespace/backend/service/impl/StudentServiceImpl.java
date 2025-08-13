@@ -1,3 +1,4 @@
+// backend/src/main/java/com/huddlespace/backend/service/impl/StudentServiceImpl.java
 package com.huddlespace.backend.service.impl;
 
 import com.huddlespace.backend.entity.Student;
@@ -42,8 +43,8 @@ public class StudentServiceImpl implements StudentService {
         Student student = getStudentByRollNumber(rollNumber);
         
         // Validate password
-        if (!student.getPassword().equals(password)) {
-            throw new RuntimeException("❌ Invalid password");
+        if (student == null || !student.getPassword().equals(password)) {
+            throw new RuntimeException("❌ Invalid credentials");
         }
         
         return student;
@@ -69,7 +70,9 @@ public class StudentServiceImpl implements StudentService {
         Student student = getStudentByRollNumber(rollNumber);
         
         // Delete by roll number (which is the ID)
-        repository.deleteById(student.getRollNumber());
+        if (student != null) {
+            repository.deleteById(student.getRollNumber());
+        }
     }
 
     @Override
@@ -80,9 +83,9 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public Student getStudentByRollNumber(String rollNumber) {
         if (rollNumber == null || rollNumber.trim().isEmpty()) {
-            throw new RuntimeException("❌ Roll number is required");
+            return null;
         }
         return repository.findByRollNumber(rollNumber)
-                .orElseThrow(() -> new RuntimeException("❌ Student not found. Please register first."));
+                .orElse(null);
     }
 }

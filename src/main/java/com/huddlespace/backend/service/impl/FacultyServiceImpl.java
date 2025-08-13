@@ -1,3 +1,4 @@
+// backend/src/main/java/com/huddlespace/backend/service/impl/FacultyServiceImpl.java
 package com.huddlespace.backend.service.impl;
 
 import com.huddlespace.backend.entity.Faculty;
@@ -42,8 +43,8 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty faculty = getFacultyByFacultyId(facultyId);
         
         // Validate password
-        if (!faculty.getPassword().equals(password)) {
-            throw new RuntimeException("❌ Invalid password");
+        if (faculty == null || !faculty.getPassword().equals(password)) {
+            throw new RuntimeException("❌ Invalid credentials");
         }
         
         return faculty;
@@ -69,7 +70,9 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty faculty = getFacultyByFacultyId(facultyId);
         
         // Delete by faculty ID (which is the primary key)
-        repository.deleteById(faculty.getFacultyId());
+        if (faculty != null) {
+            repository.deleteById(faculty.getFacultyId());
+        }
     }
 
     @Override
@@ -80,9 +83,9 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Faculty getFacultyByFacultyId(String facultyId) {
         if (facultyId == null || facultyId.trim().isEmpty()) {
-            throw new RuntimeException("❌ Faculty ID is required");
+            return null;
         }
         return repository.findByFacultyId(facultyId)
-                .orElseThrow(() -> new RuntimeException("❌ Faculty not found. Please register first."));
+                .orElse(null);
     }
 }
